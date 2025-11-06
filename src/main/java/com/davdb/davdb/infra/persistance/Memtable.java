@@ -10,27 +10,32 @@ import java.util.TreeMap;
 public class Memtable<K, V> {
 
     private TreeMap<K, V> table = new TreeMap<>();
-    private final Integer MEMTABLE_SIZE_LIMIT = 10;
+    private final Integer MEMTABLE_SIZE_LIMIT = 3;
     private boolean frozen = false;
 
     Serializer<K> keySerializer;
     Serializer<V> valueSerializer;
+    SSTableReader<K,V> tableReader;
 
 
     public Memtable(Serializer<K> keySerializer, Serializer<V> valueSerializer) {
         this.keySerializer = keySerializer;
         this.valueSerializer = valueSerializer;
+        this.tableReader = new SSTableReader<>(keySerializer, valueSerializer);
     }
 
-
+    public SortedMap<K,V> readLast() {
+        return Collections.unmodifiableSortedMap(this.tableReader.readMostRecent().getMap());
+    }
 
     public V insert(Entry<K, V> entry) throws Exception {
 
-        if(this.frozen) throw new Exception("Attempting to write to memtable while it`s frozen");
+        if(this.frozen) throw new Exception("[SStable] Attempting to write to memtable while it`s frozen");
 
         V result = table.put(entry.getkey(), entry.getValue());
 
         if(table.size() >= MEMTABLE_SIZE_LIMIT) {
+            System.out.println("[MEMTABLE] Limit reached! Flushing data");
             rotate();
         }
 
@@ -50,14 +55,14 @@ public class Memtable<K, V> {
     }
 
     public void rotate() {
-        freezeToggler();
+        freezeToggle();
         SortedMap<K,V> memtableToFlush = Collections.unmodifiableSortedMap(table);
         flush(memtableToFlush);
         table = new TreeMap<>();
-        freezeToggler();
+        freezeToggle();
     }
 
-    private void freezeToggler(){
+    private void freezeToggle() {
         this.frozen = !this.frozen;
     }
 

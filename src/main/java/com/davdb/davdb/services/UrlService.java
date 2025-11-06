@@ -7,6 +7,9 @@ import com.davdb.davdb.models.entity.UrlInfo;
 import com.davdb.davdb.models.entity.Url;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.SortedMap;
+
 @Service
 public class UrlService {
 
@@ -26,6 +29,10 @@ public class UrlService {
             e.printStackTrace();
         }
 
+    }
+
+    public SortedMap<String, UrlInfo> readLast() {
+        return this.memtable.readLast();
     }
 
     public void printTable() {

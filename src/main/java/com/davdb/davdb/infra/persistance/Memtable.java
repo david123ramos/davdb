@@ -5,18 +5,21 @@ import com.davdb.davdb.infra.persistance.serialization.Serializer;
 
 import java.util.Collections;
 import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class Memtable<K, V> {
 
-    private TreeMap<K, V> table = new TreeMap<>();
+    private AtomicReference<ConcurrentSkipListMap<K, V>> table = new AtomicReference<>(new ConcurrentSkipListMap<>());
     private final Integer MEMTABLE_SIZE_LIMIT = 1000;
 
     Serializer<K> keySerializer;
     Serializer<V> valueSerializer;
     SSTableReader<K,V> tableReader;
-    AtomicBoolean frozen = new AtomicBoolean(false);
+    AtomicBoolean rotating = new AtomicBoolean(false);
+    AtomicInteger sz = new AtomicInteger(0);
 
 
     public Memtable(Serializer<K> keySerializer, Serializer<V> valueSerializer) {
@@ -31,13 +34,16 @@ public class Memtable<K, V> {
 
     public V insert(Entry<K, V> entry) throws Exception {
 
-        if(this.frozen.get()) throw new Exception("[SStable] Attempting to write to memtable while it`s frozen");
+        SortedMap<K,V> currentTable = table.get();
+        V result = currentTable.put(entry.getkey(), entry.getValue());
 
-        V result = table.put(entry.getkey(), entry.getValue());
-
-        if(table.size() >= MEMTABLE_SIZE_LIMIT) {
+        if(sz.incrementAndGet() >= MEMTABLE_SIZE_LIMIT && rotating.compareAndSet(false, true)) {
             System.out.println("[MEMTABLE] Limit reached! Flushing data");
-            rotate();
+            try{
+                rotate();
+            }finally {
+                sz.set(0);
+            }
         }
 
         return result;
@@ -47,8 +53,9 @@ public class Memtable<K, V> {
         System.out.println("[MEMTABLE] start printing data...");
 
         int line = 1;
-        for(K key : this.table.keySet()) {
-            System.out.println("[MEMTABLE] {"+line+"} "+key+": "+ this.table.get(key));
+        SortedMap<K,V> tbToPrint = this.table.get();
+        for(K key : tbToPrint.keySet()) {
+            System.out.println("[MEMTABLE] {"+line+"} "+key+": "+ tbToPrint.get(key));
             line++;
         }
 
@@ -56,18 +63,8 @@ public class Memtable<K, V> {
     }
 
     public void rotate() {
-        freezeToggle();
-        SortedMap<K,V> memtableToFlush = Collections.unmodifiableSortedMap(table);
-        flush(memtableToFlush);
-        table = new TreeMap<>();
-        freezeToggle();
-    }
-
-    private void freezeToggle() {
-        boolean prev;
-        do {
-            prev = frozen.get();
-        } while (!frozen.compareAndSet(prev, !prev));
+        SortedMap<K,V> memtableToFlush = table.getAndSet(new ConcurrentSkipListMap<>());
+        flush(Collections.unmodifiableSortedMap(memtableToFlush));
     }
 
     private void flush(SortedMap<K,V> table) {
@@ -76,6 +73,7 @@ public class Memtable<K, V> {
             @Override
             public void run() {
                 new SStable<>(table, keySerializer, valueSerializer).writeToFile();
+                rotating.set(false);
             }
         };
 

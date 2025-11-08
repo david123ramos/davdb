@@ -13,11 +13,10 @@ import java.util.concurrent.atomic.AtomicReference;
 public class Memtable<K, V> {
 
     private AtomicReference<ConcurrentSkipListMap<K, V>> table = new AtomicReference<>(new ConcurrentSkipListMap<>());
-    private final Integer MEMTABLE_SIZE_LIMIT = 5;
+    private final Integer MEMTABLE_SIZE_LIMIT = 1_000;
 
     Serializer<K> keySerializer;
     Serializer<V> valueSerializer;
-    SSTableReader<K,V> tableReader;
     AtomicBoolean rotating = new AtomicBoolean(false);
     AtomicInteger sz = new AtomicInteger(0);
 
@@ -25,13 +24,6 @@ public class Memtable<K, V> {
     public Memtable(Serializer<K> keySerializer, Serializer<V> valueSerializer) {
         this.keySerializer = keySerializer;
         this.valueSerializer = valueSerializer;
-        this.tableReader = new SSTableReader<>(keySerializer, valueSerializer);
-    }
-
-    public SortedMap<K,V> readLast() {
-        SStable<K,V> tb = this.tableReader.readMostRecent();
-
-        return Collections.unmodifiableSortedMap(tb != null ? tb.getMap() : new ConcurrentSkipListMap<>());
     }
 
     public V insert(Entry<K, V> entry) throws Exception {
@@ -49,19 +41,6 @@ public class Memtable<K, V> {
         }
 
         return result;
-    }
-
-    public void printdata() {
-        System.out.println("[MEMTABLE] start printing data...");
-
-        int line = 1;
-        SortedMap<K,V> tbToPrint = this.table.get();
-        for(K key : tbToPrint.keySet()) {
-            System.out.println("[MEMTABLE] {"+line+"} "+key+": "+ tbToPrint.get(key));
-            line++;
-        }
-
-        System.out.println("[MEMTABLE] end printing data...");
     }
 
     public void rotate() {

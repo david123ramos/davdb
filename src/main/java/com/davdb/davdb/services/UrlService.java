@@ -1,22 +1,28 @@
 package com.davdb.davdb.services;
 
 import com.davdb.davdb.infra.persistance.Memtable;
+import com.davdb.davdb.infra.persistance.SSTableReader;
+import com.davdb.davdb.infra.persistance.SStable;
 import com.davdb.davdb.infra.persistance.serialization.Serializer;
 import com.davdb.davdb.models.dto.UrlEntryDTO;
 import com.davdb.davdb.models.entity.UrlInfo;
 import com.davdb.davdb.models.entity.Url;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.util.Collections;
 import java.util.SortedMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 @Service
 public class UrlService {
 
     private Memtable<String, UrlInfo> memtable;
+    SSTableReader<String, UrlInfo> tableReader;
+
 
     UrlService(Serializer<String> keySerializer, Serializer<UrlInfo> urlInfoSerializer) {
         this.memtable = new Memtable<>(keySerializer, urlInfoSerializer);
+        this.tableReader = new SSTableReader<>(keySerializer, urlInfoSerializer);
     }
 
     public void saveUrlClick(UrlEntryDTO entry) throws Exception {
@@ -33,11 +39,8 @@ public class UrlService {
     }
 
     public SortedMap<String, UrlInfo> readLast() {
-        return this.memtable.readLast();
-    }
-
-    public void printTable() {
-        this.memtable.printdata();
+        SStable<String, UrlInfo> tb = this.tableReader.readMostRecent();
+        return Collections.unmodifiableSortedMap(tb != null ? tb.getMap() : new ConcurrentSkipListMap<>());
     }
 
 }

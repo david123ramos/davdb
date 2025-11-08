@@ -29,7 +29,9 @@ public class Memtable<K, V> {
     }
 
     public SortedMap<K,V> readLast() {
-        return Collections.unmodifiableSortedMap(this.tableReader.readMostRecent().getMap());
+        SStable<K,V> tb = this.tableReader.readMostRecent();
+
+        return Collections.unmodifiableSortedMap(tb != null ? tb.getMap() : new ConcurrentSkipListMap<>());
     }
 
     public V insert(Entry<K, V> entry) throws Exception {

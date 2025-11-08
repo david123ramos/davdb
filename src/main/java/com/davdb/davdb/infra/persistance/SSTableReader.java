@@ -24,6 +24,8 @@ public class SSTableReader<K, V> {
     public SStable<K, V> readMostRecent() {
         File file = Path.of(SStable.ROOT_DATA_PATH+"/CURRENT.txt").toFile();
 
+        if(!file.exists()) return null;
+
         String sstablename;
 
         try(DataInputStream in = new DataInputStream(new FileInputStream(file))) {

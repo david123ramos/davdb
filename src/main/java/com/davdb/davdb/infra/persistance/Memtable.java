@@ -1,6 +1,5 @@
 package com.davdb.davdb.infra.persistance;
 
-import com.davdb.davdb.infra.persistance.entity.Entry;
 import com.davdb.davdb.infra.persistance.serialization.Serializer;
 
 import java.io.IOException;
@@ -16,8 +15,8 @@ import java.util.concurrent.atomic.AtomicReference;
 public class Memtable<K, V> {
 
     private AtomicReference<ConcurrentSkipListMap<K, V>> table = new AtomicReference<>(new ConcurrentSkipListMap<>());
-    private final Integer MEMTABLE_SIZE_LIMIT = 1_000;
-    private final WAL WALService;
+    private final Integer MEMTABLE_SIZE_LIMIT = 3;
+    private final WAL<K,V> WALService;
 
     Serializer<K> keySerializer;
     Serializer<V> valueSerializer;
@@ -33,7 +32,7 @@ public class Memtable<K, V> {
         System.out.println("[MEMTABLE - WAL persistance type] synchronous commit is " + (this.isSynchronousCommitActive ? "active" : "deactivated"));
 
         try {
-            this.WALService = new WAL();
+            this.WALService = new WAL<>();
         } catch (IOException e) {
             e.printStackTrace();
             throw new RuntimeException("[MEMTABLE] Was not possible to create log file");
@@ -41,14 +40,14 @@ public class Memtable<K, V> {
 
     }
 
-    public V insert(Entry<K, V> entry) throws ExecutionException, InterruptedException {
+    public V insert(K key, V value) throws ExecutionException, InterruptedException {
 
-        CompletableFuture resultWalLine = WALService.write(entry);
+        CompletableFuture<Boolean> resultWalLine = WALService.write(key, value);
 
         if(isSynchronousCommitActive) resultWalLine.get();
 
         SortedMap<K,V> currentTable = table.get();
-        V result = currentTable.put(entry.getkey(), entry.getValue());
+        V result = currentTable.put(key, value);
 
         if(result == null && sz.incrementAndGet() >= MEMTABLE_SIZE_LIMIT && rotating.compareAndSet(false, true)) {
             System.out.println("[MEMTABLE] Limit reached! Flushing data");

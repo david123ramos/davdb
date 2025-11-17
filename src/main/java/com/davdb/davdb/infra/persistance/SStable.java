@@ -31,7 +31,7 @@ public class SStable<K,V> {
 
     public void writeToFile() {
         System.out.println("[SSTable] Saving memtable in sstable file");
-        String tablename = "table/sstable_"+ LocalDateTime.now().toInstant(ZoneOffset.UTC)+".davtable";
+        String tablename = "table/sstable_"+ LocalDateTime.now().toInstant(ZoneOffset.UTC)+".sst";
 
         File file = new File(ROOT_DATA_PATH + tablename);
 

@@ -1,6 +1,5 @@
 package com.davdb.davdb.infra.persistance;
 
-import com.davdb.davdb.infra.persistance.entity.Entry;
 import com.davdb.davdb.infra.persistance.entity.WALLine;
 
 import java.io.BufferedWriter;
@@ -22,23 +21,23 @@ public class WAL<K, V> {
 
 
     public WAL() throws IOException {
-        String FILE_LOG_PATH = "data/log.davdbwal";
+        String FILE_LOG_PATH = "data/davdb.wal";
         FileWriter fileWriter = new FileWriter(FILE_LOG_PATH, true);
         logWriter = new BufferedWriter(fileWriter);
         startWritePooling();
     }
 
-    public CompletableFuture<Boolean> write(Entry<K,V> entry)  {
+    public CompletableFuture<Boolean> write(K key, V value)  {
         String WAL_SEPARATOR = "|";
-        String checksumValue = entry.getkey().toString() + WAL_SEPARATOR + entry.getValue().toString();
+        String checksumValue = key + WAL_SEPARATOR + value.toString();
         CRC32 crc32 = new CRC32();
         crc32.update(checksumValue.getBytes(StandardCharsets.UTF_8));
         StringBuilder sb = new StringBuilder()
                 .append(lsnCounter.incrementAndGet())
                         .append(WAL_SEPARATOR)
-                                .append(entry.getkey().toString())
+                                .append(key)
                                         .append(WAL_SEPARATOR)
-                                                .append(entry.getValue().toString())
+                                                .append(value)
                                                         .append(WAL_SEPARATOR)
                                                                 .append(crc32.getValue());
 

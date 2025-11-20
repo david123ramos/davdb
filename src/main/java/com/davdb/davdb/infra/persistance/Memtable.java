@@ -51,7 +51,7 @@ public class Memtable<K extends Comparable<K>, V> {
 
         if(result != null) return  result;
 
-        //it's not completely guaranteed that flushed sstable will flush exactly MEMTABLE_SIZE_LIMIT entries.
+        //it's not completely guaranteed that flushed sstable will contain exactly MEMTABLE_SIZE_LIMIT entries.
         //Because incrementAndGet and check of rotating flag can happen concurrently. There`s a race condition.
         //It means that flushed file can contain more entries than the limit defined even if the thread that has inserted
         //into memtable wasn`t the one  responsible for calling the rotating function.

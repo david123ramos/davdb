@@ -49,7 +49,13 @@ public class Memtable<K extends Comparable<K>, V> {
         SortedMap<K,V> currentTable = table.get();
         V result = currentTable.put(key, value);
 
-        if(result == null && sz.incrementAndGet() >= MEMTABLE_SIZE_LIMIT && rotating.compareAndSet(false, true)) {
+        if(result != null) return  result;
+
+        //it's not completely guaranteed that flushed sstable will flush exactly MEMTABLE_SIZE_LIMIT entries.
+        //Because incrementAndGet and check of rotating flag can happen concurrently. There`s a race condition.
+        //It means that flushed file can contain more entries than the limit defined even if the thread that has inserted
+        //into memtable wasn`t the one  responsible for calling the rotating function.
+        if(sz.incrementAndGet() >= MEMTABLE_SIZE_LIMIT && rotating.compareAndSet(false, true)) {
             System.out.println("[MEMTABLE] Limit reached! Flushing data");
             try{
                 rotate();

@@ -1,5 +1,6 @@
-![plot](./bodedb-logo.png)
-
+<p align="center">
+    <img src="./bodedb-logo.png" alt="drawing" width="400"/>
+</p>
 # BodeDB
 Lightweight fun purposes key-value distributed database inspired in LevelDB and RocksDB.
 Designed for speed, durability it uses an LSM-tree storage engine, SSTables, indexing, compression, filtering using

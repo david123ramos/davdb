@@ -30,7 +30,7 @@ public class SStable<K,V> {
     }
 
     /*
-    *
+    * |================SSTABLE==============|
     * |---------HEADER----------------------|
     * | MAGIC_NUMBER: 0xF1A5C0DB (fiasco db)|
     * |-------------------------------------|
@@ -55,7 +55,7 @@ public class SStable<K,V> {
     * | keyN @ offset 8741 @ block N        |
     * | index checksum                      |
     * |-------------------------------------|
-    * |CUCKOO FILTER -----------------------|
+    * |Bloom FILTER ------------------------|
     * | entries: [1,2,4,5...N]              |
     * | bucket: 3                           |
     * | finger: 3bits                       |
@@ -63,8 +63,8 @@ public class SStable<K,V> {
     * |Footer-------------------------------|
     * |index @ offset 1023912               |
     * |index_size: 1231231344               |
-    * |cuckoo_filter @ offset 1209483       |
-    * |cuckoo_filter_size: 19234            |
+    * |Bloom_filter @ offset 1209483        |
+    * |Bloom_filter_size: 19234             |
     * |MAGIC_NUMBER: 0xF1A5C0DBE7A11 (fiasco db tail)
     * |=====================================|
     * */
